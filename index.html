@@ -659,9 +659,9 @@ body {
  
 </div>
 <script>
-const API_KEY = "const API_KEY = "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";
- 
-const OPENAI_MODEL = "gpt-4.1-mini";
+const API_KEY = "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";
+const OPENROUTER_MODEL = "openai/gpt-4.1-mini";
+
 
 let imageBase64 = null;
 let imageMimeType = "image/jpeg";
@@ -671,20 +671,18 @@ let listingData = {};
 let selectedMarket = null;
 let savedItems = 0;
 
-function getOpenAIText(data) {
-  if (data.output_text) return data.output_text;
-
-  const message = data.output?.find(item => item.type === "message");
-  const textPart = message?.content?.find(part => part.type === "output_text");
-  return textPart?.text || "";
+function getOpenRouterText(data) {
+  return data.choices?.[0]?.message?.content || "";
 }
 
-async function callOpenAI(body) {
-  const res = await fetch("https://api.openai.com/v1/responses", {
+async function callOpenRouter(body) {
+  const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "Authorization": `Bearer ${API_KEY}`
+      "Authorization": `Bearer ${API_KEY}`,
+      "HTTP-Referer": window.location.origin,
+      "X-OpenRouter-Title": "Kaitiaki"
     },
     body: JSON.stringify(body)
   });
@@ -693,10 +691,10 @@ async function callOpenAI(body) {
 
   if (!res.ok) {
     console.error(data);
-    throw new Error(data.error?.message || "OpenAI request failed");
+    throw new Error(data.error?.message || "OpenRouter request failed");
   }
 
-  return getOpenAIText(data).trim();
+  return getOpenRouterText(data).trim();
 }
 
 // ── Nav ──────────────────────────────────────────────────────────────────
@@ -783,25 +781,34 @@ async function analyseImage() {
   setNav("nav-specs");
 
   try {
-    detectedProduct = await callOpenAI({
-      model: OPENAI_MODEL,
-      max_output_tokens: 80,
-      instructions: "Identify the item in this image. Reply with ONLY a short product name, max 6 words. Example: Sony WH-1000XM4 Headphones or Trek mountain bike. Nothing else.",
-      input: [{
-        role: "user",
-        content: [
-          {
-            type: "input_image",
-            image_url: `data:${imageMimeType};base64,${imageBase64}`,
+    detectedProduct = await callOpenRouter({
+  model: OPENROUTER_MODEL,
+  max_tokens: 80,
+  messages: [
+    {
+      role: "system",
+      content: "Identify the item in this image. Reply with ONLY a short product name, max 6 words. Example: Sony WH-1000XM4 Headphones or Trek mountain bike. Nothing else."
+    },
+    {
+      role: "user",
+      content: [
+        {
+          type: "text",
+          text: "What is this?"
+        },
+        {
+          type: "image_url",
+          image_url: {
+            url: `data:${imageMimeType};base64,${imageBase64}`,
             detail: "auto"
-          },
-          {
-            type: "input_text",
-            text: "What is this?"
           }
-        ]
-      }]
-    });
+        }
+      ]
+    }
+  ]
+});
+
+
 
     document.getElementById("aiDetectedName").textContent = detectedProduct;
   } catch (err) {
@@ -857,12 +864,21 @@ Generate a TradeMe listing for NZ. Reply ONLY with valid JSON:
 Rules: title max 60 chars, description max 2 short sentences, 4 tags. Price in NZD based on realistic NZ second-hand values.`;
 
   try {
-    const raw = await callOpenAI({
-      model: OPENAI_MODEL,
-      max_output_tokens: 500,
-      instructions: "You generate concise marketplace listings. Reply ONLY with valid JSON. No markdown. No code fence.",
-      input: prompt
-    });
+    const raw = await callOpenRouter({
+  model: OPENROUTER_MODEL,
+  max_tokens: 500,
+  messages: [
+    {
+      role: "system",
+      content: "You generate concise marketplace listings. Reply ONLY with valid JSON. No markdown. No code fence."
+    },
+    {
+      role: "user",
+      content: prompt
+    }
+  ]
+});
+
 
     const cleaned = raw.replace(/```json|```/g, "").trim();
     const d = JSON.parse(cleaned);
