@@ -660,7 +660,7 @@ body {
 </div>
 <script>
 const API_KEY = "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";
-const OPENROUTER_MODEL = "openai/gpt-4o-mini";
+const OPENROUTER_MODEL = "openrouter/free";
 
 
 
@@ -680,10 +680,10 @@ async function callOpenRouter(body) {
   const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
     method: "POST",
     headers: {
-      "Content-Type": "application/json",
       "Authorization": `Bearer ${API_KEY}`,
-      "HTTP-Referer": window.location.origin,
-      "X-OpenRouter-Title": "Kaitiaki"
+      "Content-Type": "application/json",
+      "HTTP-Referer": "https://your-github-username.github.io",
+      "X-Title": "Kaitiaki"
     },
     body: JSON.stringify(body)
   });
@@ -691,12 +691,16 @@ async function callOpenRouter(body) {
   const data = await res.json();
 
   if (!res.ok) {
-    console.error(data);
-    throw new Error(data.error?.message || "OpenRouter request failed");
+    const msg = data.error?.message || JSON.stringify(data);
+    throw new Error(`${res.status}: ${msg}`);
   }
 
-  return getOpenRouterText(data).trim();
+  const text = data.choices?.[0]?.message?.content;
+  if (!text) throw new Error("No text returned from OpenRouter");
+
+  return text.trim();
 }
+
 
 // ── Nav ──────────────────────────────────────────────────────────────────
 function goToScreen(id) {
