@@ -1,0 +1,972 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Kaitiaki — Give It Another Life</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;700&family=Nunito:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --moss:     #3d5a38;
+  --moss-lt:  #5a7a54;
+  --moss-dk:  #263824;
+  --fern:     #6b8f4e;
+  --fern-lt:  #c8dbb8;
+  --fern-xl:  #eef4e8;
+  --stone:    #8c8070;
+  --stone-lt: #c9bfb0;
+  --stone-xl: #f4f1ec;
+  --earth:    #7a5c3a;
+  --earth-lt: #c9a87a;
+  --earth-xl: #f5ede0;
+  --cream:    #faf8f3;
+  --ink:      #2a2a22;
+  --ink2:     #5a5a4a;
+  --ink3:     #9a9a88;
+  --white:    #ffffff;
+  --radius:   18px;
+  --radius-sm:12px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'Nunito', sans-serif;
+  background: var(--stone-xl);
+  color: var(--ink);
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+}
+.phone {
+  width: 100%; max-width: 420px;
+  min-height: 100vh; background: var(--cream);
+  position: relative;
+}
+ 
+/* ── Animations ── */
+@keyframes stamp {
+  0%   { transform: scale(1.15) rotate(-1.5deg); opacity:0; }
+  65%  { transform: scale(0.97) rotate(0.4deg); opacity:1; }
+  100% { transform: scale(1) rotate(0deg); opacity:1; }
+}
+@keyframes popIn {
+  0%   { transform: scale(0.75) translateY(6px); opacity:0; }
+  70%  { transform: scale(1.05) translateY(-1px); opacity:1; }
+  100% { transform: scale(1) translateY(0); opacity:1; }
+}
+@keyframes slideUp {
+  from { opacity:0; transform:translateY(16px); }
+  to   { opacity:1; transform:translateY(0); }
+}
+@keyframes wobble {
+  0%,100% { transform:rotate(0); }
+  25% { transform:rotate(-4deg); }
+  75% { transform:rotate(4deg); }
+}
+@keyframes frameFlick {
+  0%,100% { transform:skewX(0); }
+  33% { transform:skewX(-0.4deg) scaleX(0.998); }
+  66% { transform:skewX(0.4deg) scaleX(1.002); }
+}
+@keyframes spin { to { transform:rotate(360deg); } }
+@keyframes bounce {
+  0%,60%,100% { transform:translateY(0); }
+  30% { transform:translateY(-6px); }
+}
+@keyframes jitter {
+  0%,100% { transform:translate(0,0) rotate(0); }
+  20% { transform:translate(-1px,1px) rotate(-0.4deg); }
+  40% { transform:translate(1px,-1px) rotate(0.4deg); }
+  60% { transform:translate(-1px,-1px) rotate(0.2deg); }
+  80% { transform:translate(1px,1px) rotate(-0.2deg); }
+}
+ 
+/* ── Topbar ── */
+.topbar {
+  background: var(--moss);
+  padding: 52px 22px 32px;
+  position: relative; overflow: hidden;
+  animation: frameFlick 7s steps(3,end) infinite;
+}
+.topbar::before {
+  content:''; position:absolute;
+  bottom:-1px; left:0; right:0; height:30px;
+  background:var(--cream); border-radius:30px 30px 0 0;
+}
+.topbar::after {
+  content:''; position:absolute; inset:0;
+  background: repeating-linear-gradient(90deg,transparent 0,transparent 3px,rgba(255,255,255,.018) 3px,rgba(255,255,255,.018) 4px);
+  pointer-events:none;
+}
+.topbar-inner { display:flex; justify-content:space-between; align-items:center; }
+.logo { font-family:'Playfair Display',serif; font-size:26px; font-weight:700; color:var(--cream); line-height:1; }
+.logo-sub { font-size:10px; color:var(--fern-lt); letter-spacing:2px; text-transform:uppercase; margin-top:4px; font-weight:400; }
+.saved-badge {
+  display:flex; align-items:center; gap:9px;
+  background:rgba(0,0,0,.2); border:1px solid rgba(255,255,255,.15);
+  border-radius:13px; padding:9px 14px;
+}
+.saved-badge-text { display:flex; flex-direction:column; line-height:1; }
+.saved-badge-num { font-family:'Playfair Display',serif; font-size:20px; font-weight:700; color:#fff; }
+.saved-badge-label { font-size:9px; color:var(--fern-lt); letter-spacing:1.2px; text-transform:uppercase; margin-top:2px; }
+ 
+/* ── Screens ── */
+.screen { display:none; padding:20px 20px 110px; }
+.screen.active { display:block; animation:slideUp .3s ease; }
+.heading { font-family:'Playfair Display',serif; font-size:24px; font-weight:700; color:var(--moss-dk); margin-bottom:5px; line-height:1.2; }
+.subheading { font-size:13px; color:var(--ink3); margin-bottom:20px; line-height:1.5; }
+ 
+/* ── Upload zone ── */
+.upload-zone {
+  border:2px dashed var(--fern-lt); border-radius:var(--radius);
+  padding:42px 20px; text-align:center; cursor:pointer;
+  background:var(--fern-xl); transition:border-color .2s, background .2s;
+}
+.upload-zone:hover,.upload-zone.drag { border-color:var(--fern); background:#e0ecd4; }
+.upload-zone:hover .upload-icon-wrap { animation:wobble .45s ease; }
+.upload-icon-wrap {
+  width:70px; height:70px; background:var(--moss); border-radius:50%;
+  display:flex; align-items:center; justify-content:center; margin:0 auto 18px;
+}
+.upload-zone h2 { font-family:'Playfair Display',serif; font-size:18px; color:var(--moss-dk); margin-bottom:8px; }
+.upload-zone p { font-size:13px; color:var(--ink3); line-height:1.5; }
+#fileInput { display:none; }
+ 
+.eco-tip {
+  background:var(--earth-xl); border-left:3px solid var(--earth-lt);
+  border-radius:0 var(--radius-sm) var(--radius-sm) 0;
+  padding:13px 16px; margin-top:14px; font-size:13px; color:var(--earth);
+  line-height:1.5; display:flex; gap:10px; align-items:flex-start;
+  animation:popIn .45s ease both;
+}
+.eco-tip strong { font-weight:700; }
+ 
+.img-preview {
+  border-radius:var(--radius); overflow:hidden; position:relative;
+  margin-bottom:14px; border:1px solid var(--fern-lt);
+  animation:stamp .35s cubic-bezier(.36,.07,.19,.97);
+}
+.img-preview img { width:100%; max-height:220px; object-fit:cover; display:block; }
+.change-btn {
+  position:absolute; bottom:10px; right:10px;
+  background:rgba(250,248,243,.93); border:1px solid var(--fern-lt); color:var(--moss);
+  border-radius:10px; padding:7px 12px; font-size:13px; font-weight:600;
+  cursor:pointer; font-family:'Nunito',sans-serif; display:flex; align-items:center; gap:5px;
+}
+ 
+/* ── Buttons ── */
+.btn {
+  width:100%; padding:15px; border-radius:var(--radius-sm); border:none;
+  font-family:'Nunito',sans-serif; font-weight:700; font-size:15px; cursor:pointer;
+  transition:transform .08s, box-shadow .08s;
+  display:flex; align-items:center; justify-content:center; gap:9px;
+}
+.btn-primary { background:var(--moss); color:var(--cream); box-shadow:0 4px 0 var(--moss-dk); }
+.btn-primary:hover { background:var(--moss-lt); }
+.btn-primary:active { transform:translateY(4px); box-shadow:0 0 0 var(--moss-dk); }
+.btn-primary:disabled { opacity:.5; cursor:not-allowed; }
+.btn-ghost {
+  background:transparent; color:var(--ink3);
+  border:1px solid var(--stone-lt); font-size:14px; padding:12px;
+}
+.btn + .btn { margin-top:10px; }
+ 
+/* ── Spec picker ── */
+.spec-section { margin-bottom:20px; }
+ 
+.spec-label {
+  font-size:11px; font-weight:700; letter-spacing:1.5px;
+  text-transform:uppercase; color:var(--ink3); margin-bottom:10px;
+  display:flex; align-items:center; gap:6px;
+}
+.optional-badge {
+  background:var(--stone-xl); border:1px solid var(--stone-lt);
+  border-radius:8px; padding:2px 8px; font-size:9px;
+  letter-spacing:.5px; color:var(--stone); text-transform:uppercase;
+}
+ 
+.pill-row { display:flex; flex-wrap:wrap; gap:8px; }
+ 
+.pill {
+  padding:9px 16px; border-radius:24px;
+  border:1.5px solid var(--fern-lt); background:var(--white);
+  font-family:'Nunito',sans-serif; font-size:13px; font-weight:600;
+  color:var(--moss-dk); cursor:pointer;
+  box-shadow:0 2px 0 var(--fern-lt);
+  transition:transform .08s, box-shadow .08s, background .1s;
+  animation:popIn .25s ease both;
+}
+.pill:active { transform:translateY(2px); box-shadow:none; }
+.pill.selected {
+  background:var(--moss); color:var(--cream);
+  border-color:var(--moss); box-shadow:0 2px 0 var(--moss-dk);
+}
+.pill.skip {
+  background:var(--stone-xl); color:var(--ink3);
+  border-color:var(--stone-lt); font-style:italic;
+  box-shadow:0 2px 0 var(--stone-lt);
+}
+.pill.skip.selected {
+  background:var(--stone); color:var(--cream);
+  border-color:var(--stone); box-shadow:0 2px 0 #5a5048;
+}
+ 
+/* stagger pill animations */
+.pill:nth-child(1) { animation-delay:.03s; }
+.pill:nth-child(2) { animation-delay:.07s; }
+.pill:nth-child(3) { animation-delay:.11s; }
+.pill:nth-child(4) { animation-delay:.15s; }
+.pill:nth-child(5) { animation-delay:.19s; }
+.pill:nth-child(6) { animation-delay:.23s; }
+ 
+/* AI detected badge */
+.ai-detected {
+  background:var(--fern-xl); border:1px solid var(--fern-lt);
+  border-radius:var(--radius-sm); padding:14px 16px; margin-bottom:20px;
+  display:flex; align-items:center; gap:12px;
+  animation:stamp .35s cubic-bezier(.36,.07,.19,.97);
+}
+.ai-detected-icon {
+  width:38px; height:38px; background:var(--moss); border-radius:10px;
+  display:flex; align-items:center; justify-content:center; flex-shrink:0;
+}
+.ai-detected-text { flex:1; }
+.ai-detected-label { font-size:9px; text-transform:uppercase; letter-spacing:1.5px; color:var(--ink3); margin-bottom:3px; }
+.ai-detected-name { font-family:'Playfair Display',serif; font-size:16px; color:var(--moss-dk); font-weight:700; }
+ 
+/* ── Price display ── */
+.price-display {
+  background:var(--moss); border-radius:var(--radius); padding:22px 20px;
+  text-align:center; margin-bottom:12px;
+  animation:stamp .4s cubic-bezier(.36,.07,.19,.97);
+  box-shadow:0 4px 0 var(--moss-dk);
+}
+.price-label { font-size:10px; color:var(--fern-lt); letter-spacing:2px; text-transform:uppercase; margin-bottom:5px; }
+.price-value { font-family:'Playfair Display',serif; font-size:50px; font-weight:700; color:var(--cream); line-height:1; margin-bottom:3px; }
+.price-range { font-size:12px; color:var(--fern-lt); }
+ 
+/* ── Cards ── */
+.card {
+  background:var(--white); border:1px solid var(--fern-lt);
+  border-radius:var(--radius); padding:17px; margin-bottom:12px;
+}
+.card-label {
+  font-size:10px; font-weight:700; letter-spacing:1.8px;
+  text-transform:uppercase; color:var(--ink3); margin-bottom:8px;
+  display:flex; align-items:center; gap:6px;
+}
+.card-value { font-size:15px; color:var(--ink); line-height:1.45; }
+ 
+.details-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:12px; }
+.detail-chip {
+  background:var(--white); border:1px solid var(--fern-lt);
+  border-radius:var(--radius-sm); padding:13px;
+  animation:popIn .3s ease both;
+}
+.detail-chip:nth-child(2){animation-delay:.05s;}
+.detail-chip:nth-child(3){animation-delay:.1s;}
+.detail-chip:nth-child(4){animation-delay:.15s;}
+.chip-label {
+  font-size:9px; color:var(--ink3); text-transform:uppercase;
+  letter-spacing:1px; margin-bottom:5px; font-weight:700;
+  display:flex; align-items:center; gap:4px;
+}
+.chip-val { font-size:14px; font-weight:700; color:var(--moss-dk); }
+ 
+/* ── Tag chips ── */
+.tags { display:flex; flex-wrap:wrap; gap:8px; }
+.tag {
+  background:var(--fern-xl); border:1.5px solid var(--fern-lt);
+  border-radius:20px; padding:6px 14px;
+  font-size:12px; font-weight:600; color:var(--moss);
+  font-family:'Nunito',sans-serif;
+}
+ 
+/* ── Marketplace ── */
+.market-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:14px; }
+.market-card {
+  background:var(--white); border:1.5px solid var(--fern-lt);
+  border-radius:var(--radius-sm); padding:18px 12px; text-align:center;
+  cursor:pointer; box-shadow:0 3px 0 var(--fern-lt);
+  transition:transform .08s, box-shadow .08s;
+  animation:popIn .3s ease both;
+}
+.market-card:nth-child(2){animation-delay:.05s;}
+.market-card:nth-child(3){animation-delay:.1s;}
+.market-card:nth-child(4){animation-delay:.15s;}
+.market-card:active { transform:translateY(3px); box-shadow:none; }
+.market-card:hover { border-color:var(--moss); }
+.market-card.selected { border-color:var(--moss); background:var(--fern-xl); box-shadow:0 3px 0 var(--moss); }
+.market-icon { display:flex; justify-content:center; margin-bottom:8px; }
+.market-name { font-family:'Playfair Display',serif; font-size:14px; color:var(--moss-dk); }
+.market-sub { font-size:11px; color:var(--ink3); margin-top:3px; }
+ 
+/* ── Success ── */
+.success-wrap {
+  background:var(--fern-xl); border:1.5px solid var(--fern-lt);
+  border-radius:var(--radius); padding:28px 20px; text-align:center;
+  margin-bottom:14px; animation:stamp .4s cubic-bezier(.36,.07,.19,.97);
+  box-shadow:0 4px 0 var(--fern-lt);
+}
+.success-icon { display:flex; justify-content:center; margin-bottom:12px; animation:jitter .5s steps(4,end) .4s both; }
+.success-wrap h3 { font-family:'Playfair Display',serif; font-size:22px; color:var(--moss-dk); margin-bottom:8px; }
+.success-wrap p { font-size:14px; color:var(--ink2); line-height:1.6; }
+ 
+.impact-row { display:flex; gap:10px; margin-bottom:12px; }
+.impact-chip {
+  flex:1; background:var(--white); border:1px solid var(--earth-lt);
+  border-radius:var(--radius-sm); padding:13px 8px; text-align:center;
+  animation:popIn .3s ease both;
+}
+.impact-chip:nth-child(2){animation-delay:.07s;}
+.impact-chip:nth-child(3){animation-delay:.14s;}
+.i-icon { display:flex; justify-content:center; margin-bottom:4px; }
+.i-val { font-family:'Playfair Display',serif; font-size:20px; color:var(--earth); }
+.i-label { font-size:10px; color:var(--ink3); margin-top:3px; }
+ 
+/* ── Spinner ── */
+.spinner {
+  width:17px; height:17px;
+  border:2px solid rgba(250,248,243,.35);
+  border-top-color:var(--cream); border-radius:50%;
+  animation:spin .7s linear infinite; display:inline-block;
+}
+ 
+/* ── Typing dots ── */
+.typing-indicator { display:flex; gap:4px; align-items:center; padding:2px 0; }
+.typing-indicator span {
+  width:7px; height:7px; background:var(--fern);
+  border-radius:50%; animation:bounce 1.1s steps(3,end) infinite;
+}
+.typing-indicator span:nth-child(2){animation-delay:.2s;}
+.typing-indicator span:nth-child(3){animation-delay:.4s;}
+ 
+/* ── Bottom nav ── */
+.bottom-nav {
+  position:fixed; bottom:0; left:50%; transform:translateX(-50%);
+  width:100%; max-width:420px;
+  background:rgba(250,248,243,.96);
+  border-top:1.5px solid var(--fern-lt);
+  display:flex; padding:10px 0 24px; z-index:100;
+}
+.nav-item {
+  flex:1; display:flex; flex-direction:column;
+  align-items:center; gap:3px; cursor:pointer; padding:6px;
+  color:var(--ink3); font-size:10px; font-weight:700;
+  letter-spacing:.5px; text-transform:uppercase;
+  transition:color .15s, transform .08s;
+}
+.nav-item:active { transform:scale(.88); }
+.nav-item.active { color:var(--moss); }
+</style>
+</head>
+<body>
+<div class="phone">
+ 
+  <!-- Topbar -->
+  <div class="topbar">
+    <div class="topbar-inner">
+      <div>
+        <div class="logo">Kaitiaki</div>
+        <div class="logo-sub">Give it another life</div>
+      </div>
+      <div class="saved-badge">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#c8dbb8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 8c0 0-2-5-8-5C3 3 2 10 2 10s0 7 9 7c3 0 5-1.5 6.5-4"/><path d="M2 10s4 1 7 4"/><path d="M22 3s-6 2-8 9"/></svg>
+        <div class="saved-badge-text">
+          <span class="saved-badge-num" id="savedCount">0</span>
+          <span class="saved-badge-label">rehomed</span>
+        </div>
+      </div>
+    </div>
+  </div>
+ 
+  <!-- ═══ SCREEN 1 — Upload ═══ -->
+  <div class="screen active" id="screen-upload">
+    <p class="heading">What's going<br>to a new home?</p>
+    <p class="subheading">Snap a photo to get started.</p>
+ 
+    <div class="upload-zone" id="uploadZone" onclick="document.getElementById('fileInput').click()">
+      <div class="upload-icon-wrap">
+        <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#c8dbb8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4h-5l-2 3H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3.5l-2-3z"/><circle cx="12" cy="13" r="3"/></svg>
+      </div>
+      <h2>Take or upload a photo</h2>
+      <p>AI identifies it instantly</p>
+      <input type="file" id="fileInput" accept="image/*" capture="environment">
+    </div>
+ 
+    <div class="eco-tip">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#c9a87a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:1px"><path d="M12 21v-8"/><path d="M7 11c0 0 0-6 5-8 5 2 5 8 5 8"/><path d="M5 21s0-4 7-4 7 4 7 4"/></svg>
+      <span><strong>Ka pai!</strong> Selling saves ~4kg of CO₂ per item vs landfill.</span>
+    </div>
+ 
+    <div id="previewSection" style="display:none; margin-top:16px;">
+      <div class="img-preview">
+        <img id="previewImg" src="" alt="Your item">
+        <button class="change-btn" onclick="document.getElementById('fileInput').click()">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          Change
+        </button>
+      </div>
+      <button class="btn btn-primary" id="analyseBtn" onclick="analyseImage()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        Identify with AI
+      </button>
+    </div>
+  </div>
+ 
+  <!-- ═══ SCREEN 2 — Spec picker ═══ -->
+  <div class="screen" id="screen-specs">
+    <p class="heading">Quick<br><span style="color:var(--fern)">details</span></p>
+    <p class="subheading">Tap what applies — skip anything you don't know.</p>
+ 
+    <!-- AI detected item -->
+    <div class="ai-detected" id="aiDetectedBadge">
+      <div class="ai-detected-icon">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#c8dbb8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 8c0 0-2-5-8-5C3 3 2 10 2 10s0 7 9 7c3 0 5-1.5 6.5-4"/><path d="M2 10s4 1 7 4"/><path d="M22 3s-6 2-8 9"/></svg>
+      </div>
+      <div class="ai-detected-text">
+        <div class="ai-detected-label">AI identified</div>
+        <div class="ai-detected-name" id="aiDetectedName">Scanning...</div>
+      </div>
+    </div>
+ 
+    <!-- Condition -->
+    <div class="spec-section">
+      <div class="spec-label">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+        Condition
+      </div>
+      <div class="pill-row" id="conditionPills">
+        <div class="pill" onclick="selectPill(this,'condition','Brand new')">Brand new</div>
+        <div class="pill" onclick="selectPill(this,'condition','Like new')">Like new</div>
+        <div class="pill" onclick="selectPill(this,'condition','Good')">Good</div>
+        <div class="pill" onclick="selectPill(this,'condition','Fair')">Fair</div>
+        <div class="pill" onclick="selectPill(this,'condition','For parts')">For parts</div>
+        <div class="pill skip" onclick="selectPill(this,'condition','Unknown')">Not sure</div>
+      </div>
+    </div>
+ 
+    <!-- Age -->
+    <div class="spec-section">
+      <div class="spec-label">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        Age
+        <span class="optional-badge">optional</span>
+      </div>
+      <div class="pill-row" id="agePills">
+        <div class="pill" onclick="selectPill(this,'age','Under 1 year')">Under 1yr</div>
+        <div class="pill" onclick="selectPill(this,'age','1–2 years')">1–2 yrs</div>
+        <div class="pill" onclick="selectPill(this,'age','3–5 years')">3–5 yrs</div>
+        <div class="pill" onclick="selectPill(this,'age','5+ years')">5+ yrs</div>
+        <div class="pill skip" onclick="selectPill(this,'age','Unknown')">Don't know</div>
+      </div>
+    </div>
+ 
+    <!-- Accessories -->
+    <div class="spec-section">
+      <div class="spec-label">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
+        Comes with
+        <span class="optional-badge">optional</span>
+      </div>
+      <div class="pill-row" id="accessoryPills">
+        <div class="pill toggle" onclick="togglePill(this,'accessories','Original box')">Original box</div>
+        <div class="pill toggle" onclick="togglePill(this,'accessories','Manual')">Manual</div>
+        <div class="pill toggle" onclick="togglePill(this,'accessories','Charger')">Charger</div>
+        <div class="pill toggle" onclick="togglePill(this,'accessories','Cables')">Cables</div>
+        <div class="pill toggle" onclick="togglePill(this,'accessories','Case/cover')">Case/cover</div>
+        <div class="pill toggle" onclick="togglePill(this,'accessories','Receipt')">Receipt</div>
+      </div>
+    </div>
+ 
+    <!-- Damage -->
+    <div class="spec-section">
+      <div class="spec-label">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        Any issues?
+        <span class="optional-badge">optional</span>
+      </div>
+      <div class="pill-row" id="damagePills">
+        <div class="pill" onclick="selectPill(this,'damage','None')">None</div>
+        <div class="pill" onclick="selectPill(this,'damage','Minor scratches')">Minor scratches</div>
+        <div class="pill" onclick="selectPill(this,'damage','Visible wear')">Visible wear</div>
+        <div class="pill" onclick="selectPill(this,'damage','Cracked/dented')">Cracked/dented</div>
+        <div class="pill" onclick="selectPill(this,'damage','Needs repair')">Needs repair</div>
+      </div>
+    </div>
+ 
+    <button class="btn btn-primary" id="generateBtn" onclick="generateListing()">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/></svg>
+      Generate Listing
+    </button>
+    <button class="btn btn-ghost" onclick="goToScreen('screen-upload'); resetAll()" style="margin-top:10px;">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+      Back
+    </button>
+  </div>
+ 
+  <!-- ═══ SCREEN 3 — Listing ═══ -->
+  <div class="screen" id="screen-listing">
+    <p class="heading">Your listing<br>is <span style="color:var(--fern)">ready</span></p>
+ 
+    <div class="price-display">
+      <div class="price-label">Recommended price</div>
+      <div class="price-value" id="priceValue">$—</div>
+      <div class="price-range" id="priceRange">Calculating NZ market value...</div>
+    </div>
+ 
+    <div class="details-grid" id="detailsGrid"></div>
+ 
+    <div class="card">
+      <div class="card-label">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></svg>
+        Title
+      </div>
+      <div class="card-value" id="listingTitle">—</div>
+    </div>
+ 
+    <div class="card">
+      <div class="card-label">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="17" y1="10" x2="3" y2="10"/><line x1="21" y1="6" x2="3" y2="6"/><line x1="21" y1="14" x2="3" y2="14"/><line x1="17" y1="18" x2="3" y2="18"/></svg>
+        Description
+      </div>
+      <div class="card-value" id="listingDesc" style="font-size:13px; color:var(--ink2); line-height:1.6;">—</div>
+    </div>
+ 
+    <div class="card">
+      <div class="card-label">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+        Tags
+      </div>
+      <div class="tags" id="listingTags" style="margin-top:8px;"></div>
+    </div>
+ 
+    <button class="btn btn-primary" onclick="goToScreen('screen-publish')">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/></svg>
+      Choose Marketplace
+    </button>
+    <button class="btn btn-ghost" onclick="goToScreen('screen-specs')" style="margin-top:10px;">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+      Edit details
+    </button>
+  </div>
+ 
+  <!-- ═══ SCREEN 4 — Publish ═══ -->
+  <div class="screen" id="screen-publish">
+    <p class="heading">List it<br><span style="color:var(--fern)">where?</span></p>
+    <p class="subheading">Pick a marketplace.</p>
+ 
+    <div class="market-grid">
+      <div class="market-card" onclick="selectMarket('trademe',this)">
+        <div class="market-icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#5a7a54" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg></div>
+        <div class="market-name">TradeMe</div>
+        <div class="market-sub">NZ's #1</div>
+      </div>
+      <div class="market-card" onclick="selectMarket('facebook',this)">
+        <div class="market-icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#5a7a54" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg></div>
+        <div class="market-name">Facebook</div>
+        <div class="market-sub">Marketplace</div>
+      </div>
+      <div class="market-card" onclick="selectMarket('gumtree',this)">
+        <div class="market-icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#5a7a54" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 8c0 0-2-5-8-5C3 3 2 10 2 10s0 7 9 7c3 0 5-1.5 6.5-4"/><path d="M2 10s4 1 7 4"/><path d="M22 3s-6 2-8 9"/></svg></div>
+        <div class="market-name">Gumtree</div>
+        <div class="market-sub">Free classifieds</div>
+      </div>
+      <div class="market-card" onclick="selectMarket('ebay',this)">
+        <div class="market-icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#5a7a54" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg></div>
+        <div class="market-name">eBay</div>
+        <div class="market-sub">Global reach</div>
+      </div>
+    </div>
+ 
+    <div id="publishPreview" style="display:none;">
+      <div class="card">
+        <div class="card-label">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+          Preview
+        </div>
+        <div class="card-value" id="publishTitle" style="margin-bottom:5px;">—</div>
+        <div style="font-size:15px; font-weight:700; color:var(--moss);" id="publishPrice">—</div>
+      </div>
+      <button class="btn btn-primary" id="publishBtn" onclick="publishListing()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+        Publish listing
+      </button>
+    </div>
+    <button class="btn btn-ghost" style="margin-top:10px;" onclick="goToScreen('screen-listing')">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+      Back
+    </button>
+  </div>
+ 
+  <!-- ═══ SCREEN 5 — Success ═══ -->
+  <div class="screen" id="screen-success">
+    <div class="success-wrap">
+      <div class="success-icon">
+        <svg width="54" height="54" viewBox="0 0 24 24" fill="none" stroke="#3d5a38" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 8c0 0-2-5-8-5C3 3 2 10 2 10s0 7 9 7c3 0 5-1.5 6.5-4"/><path d="M2 10s4 1 7 4"/><path d="M22 3s-6 2-8 9"/></svg>
+      </div>
+      <h3>Listed &amp; living on!</h3>
+      <p id="successMsg">Your item has found a new path.</p>
+    </div>
+ 
+    <div class="impact-row">
+      <div class="impact-chip">
+        <div class="i-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#c9a87a" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9.59 4.59A2 2 0 1 1 11 8H2m10.59 11.41A2 2 0 1 0 14 16H2m15.73-8.27A2.5 2.5 0 1 1 19.5 12H2"/></svg></div>
+        <div class="i-val">~4kg</div>
+        <div class="i-label">CO₂ saved</div>
+      </div>
+      <div class="impact-chip">
+        <div class="i-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#c9a87a" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 8c0 0-2-5-8-5C3 3 2 10 2 10s0 7 9 7c3 0 5-1.5 6.5-4"/><path d="M2 10s4 1 7 4"/><path d="M22 3s-6 2-8 9"/></svg></div>
+        <div class="i-val" id="savedCountBig">1</div>
+        <div class="i-label">Rehomed</div>
+      </div>
+      <div class="impact-chip">
+        <div class="i-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#c9a87a" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><polyline points="23 20 23 14 17 14"/><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4-4.64 4.36A9 9 0 0 1 3.51 15"/></svg></div>
+        <div class="i-val">&#8734;</div>
+        <div class="i-label">Second lives</div>
+      </div>
+    </div>
+ 
+    <div class="eco-tip" style="margin-bottom:16px;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#c9a87a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:1px"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+      <span><strong>Ka pai!</strong> Every item rehomed is one less thing in landfill.</span>
+    </div>
+ 
+    <button class="btn btn-primary" onclick="incrementSaved(); resetAll(); goToScreen('screen-upload')">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      Sell another item
+    </button>
+    <button class="btn btn-ghost" onclick="goToScreen('screen-listing')" style="margin-top:10px;">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+      View listing
+    </button>
+  </div>
+ 
+  <!-- Bottom nav -->
+  <div class="bottom-nav">
+    <div class="nav-item active" id="nav-snap" onclick="goToScreen('screen-upload'); setNav('nav-snap')">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" id="nav-snap-icon"><path d="M14.5 4h-5l-2 3H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3.5l-2-3z"/><circle cx="12" cy="13" r="3"/></svg>
+      Snap
+    </div>
+    <div class="nav-item" id="nav-specs" onclick="goToScreen('screen-specs'); setNav('nav-specs')">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" id="nav-specs-icon"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+      Details
+    </div>
+    <div class="nav-item" id="nav-pub" onclick="goToScreen('screen-publish'); setNav('nav-pub')">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" id="nav-pub-icon"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+      Publish
+    </div>
+  </div>
+ 
+</div>
+<script>
+const API_KEY = "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";
+ 
+const OPENAI_MODEL = "gpt-4.1-mini";
+
+let imageBase64 = null;
+let imageMimeType = "image/jpeg";
+let detectedProduct = "";
+let specs = { condition: "", age: "", damage: "", accessories: [] };
+let listingData = {};
+let selectedMarket = null;
+let savedItems = 0;
+
+function getOpenAIText(data) {
+  if (data.output_text) return data.output_text;
+
+  const message = data.output?.find(item => item.type === "message");
+  const textPart = message?.content?.find(part => part.type === "output_text");
+  return textPart?.text || "";
+}
+
+async function callOpenAI(body) {
+  const res = await fetch("https://api.openai.com/v1/responses", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${API_KEY}`
+    },
+    body: JSON.stringify(body)
+  });
+
+  const data = await res.json();
+
+  if (!res.ok) {
+    console.error(data);
+    throw new Error(data.error?.message || "OpenAI request failed");
+  }
+
+  return getOpenAIText(data).trim();
+}
+
+// ── Nav ──────────────────────────────────────────────────────────────────
+function goToScreen(id) {
+  document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
+  document.getElementById(id).classList.add("active");
+  window.scrollTo(0, 0);
+}
+
+function setNav(id) {
+  document.querySelectorAll(".nav-item").forEach(n => n.classList.remove("active"));
+  document.getElementById(id).classList.add("active");
+
+  ["nav-snap-icon", "nav-specs-icon", "nav-pub-icon"].forEach(sid => {
+    const el = document.getElementById(sid);
+    if (el) el.setAttribute("stroke", "#9a9a88");
+  });
+
+  const active = document.getElementById(id + "-icon");
+  if (active) active.setAttribute("stroke", "#3d5a38");
+}
+
+document.getElementById("nav-snap-icon").setAttribute("stroke", "#3d5a38");
+
+function incrementSaved() {
+  savedItems++;
+  const el = document.getElementById("savedCount");
+  el.textContent = savedItems;
+  el.style.animation = "none";
+  requestAnimationFrame(() => {
+    el.style.animation = "stamp .4s cubic-bezier(.36,.07,.19,.97)";
+  });
+  document.getElementById("savedCountBig").textContent = savedItems;
+}
+
+// ── File upload ──────────────────────────────────────────────────────────
+document.getElementById("fileInput").addEventListener("change", function(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  imageMimeType = file.type || "image/jpeg";
+
+  const reader = new FileReader();
+  reader.onload = ev => {
+    const url = ev.target.result;
+    imageBase64 = url.split(",")[1];
+    document.getElementById("previewImg").src = url;
+    document.getElementById("previewSection").style.display = "block";
+    document.getElementById("uploadZone").style.display = "none";
+  };
+  reader.readAsDataURL(file);
+});
+
+const zone = document.getElementById("uploadZone");
+
+zone.addEventListener("dragover", e => {
+  e.preventDefault();
+  zone.classList.add("drag");
+});
+
+zone.addEventListener("dragleave", () => zone.classList.remove("drag"));
+
+zone.addEventListener("drop", e => {
+  e.preventDefault();
+  zone.classList.remove("drag");
+
+  const file = e.dataTransfer.files[0];
+  if (file && file.type.startsWith("image/")) {
+    document.getElementById("fileInput").files = e.dataTransfer.files;
+    document.getElementById("fileInput").dispatchEvent(new Event("change"));
+  }
+});
+
+// ── Step 1: identify only ────────────────────────────────────────────────
+async function analyseImage() {
+  if (!imageBase64) return;
+
+  const btn = document.getElementById("analyseBtn");
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Identifying...';
+
+  document.getElementById("aiDetectedName").textContent = "Identifying...";
+  goToScreen("screen-specs");
+  setNav("nav-specs");
+
+  try {
+    detectedProduct = await callOpenAI({
+      model: OPENAI_MODEL,
+      max_output_tokens: 80,
+      instructions: "Identify the item in this image. Reply with ONLY a short product name, max 6 words. Example: Sony WH-1000XM4 Headphones or Trek mountain bike. Nothing else.",
+      input: [{
+        role: "user",
+        content: [
+          {
+            type: "input_image",
+            image_url: `data:${imageMimeType};base64,${imageBase64}`,
+            detail: "auto"
+          },
+          {
+            type: "input_text",
+            text: "What is this?"
+          }
+        ]
+      }]
+    });
+
+    document.getElementById("aiDetectedName").textContent = detectedProduct;
+  } catch (err) {
+    document.getElementById("aiDetectedName").textContent = "Unknown item";
+    detectedProduct = "Item";
+    console.error(err);
+    alert("Could not identify the image. Check your OpenAI API key.");
+  }
+
+  btn.disabled = false;
+  btn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg> Identify with AI';
+}
+
+// ── Pill selection ───────────────────────────────────────────────────────
+function selectPill(el, field, value) {
+  el.closest(".pill-row").querySelectorAll(".pill").forEach(p => {
+    if (!p.classList.contains("toggle")) p.classList.remove("selected");
+  });
+
+  el.classList.add("selected");
+  specs[field] = value;
+}
+
+function togglePill(el, field, value) {
+  el.classList.toggle("selected");
+
+  if (el.classList.contains("selected")) {
+    if (!specs.accessories.includes(value)) specs.accessories.push(value);
+  } else {
+    specs.accessories = specs.accessories.filter(v => v !== value);
+  }
+}
+
+// ── Step 2: generate listing ─────────────────────────────────────────────
+async function generateListing() {
+  const btn = document.getElementById("generateBtn");
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Building listing...';
+
+  const accessoriesStr = specs.accessories.length > 0
+    ? specs.accessories.join(", ")
+    : "none mentioned";
+
+  const prompt = `Product: ${detectedProduct || "Item"}
+Condition: ${specs.condition || "Unknown"}
+Age: ${specs.age || "Unknown"}
+Damage/issues: ${specs.damage || "Unknown"}
+Accessories included: ${accessoriesStr}
+
+Generate a TradeMe listing for NZ. Reply ONLY with valid JSON:
+{"price_nzd":0,"price_low":0,"price_high":0,"brand":"","category":"","title":"","description":"","tags":[]}
+
+Rules: title max 60 chars, description max 2 short sentences, 4 tags. Price in NZD based on realistic NZ second-hand values.`;
+
+  try {
+    const raw = await callOpenAI({
+      model: OPENAI_MODEL,
+      max_output_tokens: 500,
+      instructions: "You generate concise marketplace listings. Reply ONLY with valid JSON. No markdown. No code fence.",
+      input: prompt
+    });
+
+    const cleaned = raw.replace(/```json|```/g, "").trim();
+    const d = JSON.parse(cleaned);
+    listingData = d;
+
+    document.getElementById("priceValue").textContent = `$${d.price_nzd}`;
+    document.getElementById("priceRange").textContent = `Range: $${d.price_low} – $${d.price_high} NZD`;
+    document.getElementById("listingTitle").textContent = d.title;
+    document.getElementById("listingDesc").textContent = d.description;
+
+    const svgSnip = paths => `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${paths}</svg>`;
+
+    document.getElementById("detailsGrid").innerHTML = `
+      <div class="detail-chip"><div class="chip-label">${svgSnip('<rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>')} Brand</div><div class="chip-val">${d.brand || "—"}</div></div>
+      <div class="detail-chip"><div class="chip-label">${svgSnip('<rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>')} Category</div><div class="chip-val">${d.category || "—"}</div></div>
+      <div class="detail-chip"><div class="chip-label">${svgSnip('<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>')} Condition</div><div class="chip-val">${specs.condition || "—"}</div></div>
+      <div class="detail-chip"><div class="chip-label">${svgSnip('<line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>')} Price NZD</div><div class="chip-val">$${d.price_nzd}</div></div>
+    `;
+
+    const te = document.getElementById("listingTags");
+    te.innerHTML = "";
+
+    (d.tags || []).forEach(t => {
+      const s = document.createElement("div");
+      s.className = "tag";
+      s.textContent = t;
+      te.appendChild(s);
+    });
+
+    goToScreen("screen-listing");
+  } catch (err) {
+    alert("Could not generate listing. Check your OpenAI API key.");
+    console.error(err);
+  }
+
+  btn.disabled = false;
+  btn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/></svg> Generate Listing';
+}
+
+// ── Marketplace ──────────────────────────────────────────────────────────
+function selectMarket(market, el) {
+  selectedMarket = market;
+
+  document.querySelectorAll(".market-card").forEach(c => c.classList.remove("selected"));
+  el.classList.add("selected");
+
+  document.getElementById("publishPreview").style.display = "block";
+  document.getElementById("publishTitle").textContent = listingData.title || "Your item";
+  document.getElementById("publishPrice").textContent = `$${listingData.price_nzd || "—"} NZD`;
+
+  const names = {
+    trademe: "TradeMe",
+    facebook: "Facebook Marketplace",
+    gumtree: "Gumtree",
+    ebay: "eBay"
+  };
+
+  document.getElementById("publishBtn").innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg> Publish to ${names[market]}`;
+}
+
+function publishListing() {
+  if (!selectedMarket) return;
+
+  const btn = document.getElementById("publishBtn");
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Publishing...';
+
+  setTimeout(() => {
+    const names = {
+      trademe: "TradeMe",
+      facebook: "Facebook Marketplace",
+      gumtree: "Gumtree",
+      ebay: "eBay"
+    };
+
+    document.getElementById("successMsg").textContent =
+      `"${listingData.title}" is live on ${names[selectedMarket]} for $${listingData.price_nzd} NZD. Someone's going to love it!`;
+
+    goToScreen("screen-success");
+
+    btn.disabled = false;
+    btn.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg> Publish listing`;
+  }, 1800);
+}
+
+// ── Reset ────────────────────────────────────────────────────────────────
+function resetAll() {
+  imageBase64 = null;
+  imageMimeType = "image/jpeg";
+  detectedProduct = "";
+  listingData = {};
+  selectedMarket = null;
+  specs = { condition: "", age: "", damage: "", accessories: [] };
+
+  document.getElementById("fileInput").value = "";
+  document.getElementById("previewSection").style.display = "none";
+  document.getElementById("uploadZone").style.display = "block";
+  document.getElementById("aiDetectedName").textContent = "Scanning...";
+  document.getElementById("publishPreview").style.display = "none";
+
+  document.querySelectorAll(".pill").forEach(p => p.classList.remove("selected"));
+  document.querySelectorAll(".market-card").forEach(c => c.classList.remove("selected"));
+}
+</script>
+</body>
+</html>
+ 
