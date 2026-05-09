@@ -820,7 +820,7 @@ async function analyseImage() {
     document.getElementById("aiDetectedName").textContent = "Unknown item";
     detectedProduct = "Item";
     console.error(err);
-    alert("Could not identify the image. Check your OpenAI API key.");
+    alert("OpenRouter error: " + err.message);
   }
 
   btn.disabled = false;
@@ -915,7 +915,7 @@ Rules: title max 60 chars, description max 2 short sentences, 4 tags. Price in N
 
     goToScreen("screen-listing");
   } catch (err) {
-    alert("Could not generate listing. Check your OpenAI API key.");
+    alert("OpenRouter error: " + err.message);
     console.error(err);
   }
 
